@@ -7,6 +7,63 @@ from osgeo import ogr
 from qgis.core import QgsApplication, QgsVectorLayer
 
 
+def extract_abstract(xml_root, target_directory, layer_name):
+    abstract_element = xml_root.find("./dataIdInfo/idAbs")
+
+    if abstract_element is None:
+        print("No abstract element for {} in {}".format(layer_name, fgdb_path))
+        return
+
+    abstract_html = abstract_element.text
+    abstract_text = BeautifulSoup(abstract_html, "lxml").text.strip()
+
+    if not abstract_text:
+        print("No abstract text for {} in {}".format(layer_name, fgdb_path))
+        return
+
+    abstract_path = path.join(target_directory, "{}.abstract.txt".format(layer_name))
+    with open(abstract_path, "w+") as abstract_file:
+        abstract_file.write(abstract_text)
+
+
+def extract_title(xml_root, target_directory, layer_name):
+    title_element = xml_root.find("./dataIdInfo/idCitation/resTitle")
+
+    if title_element is None:
+        print("No title element for {} in {}".format(layer_name, fgdb_path))
+        return
+
+    title_text = title_element.text
+
+    if not title_text:
+        print("No title text for {} in {}".format(layer_name, fgdb_path))
+        return
+
+    title_path = path.join(target_directory, "{}.title.txt".format(layer_name))
+    with open(title_path, "w+") as title_file:
+        title_file.write(title_text)
+
+
+def extract_revision_date(xml_root, target_directory, layer_name):
+    revision_date_element = xml_root.find("./dataIdInfo/idCitation/date/reviseDate")
+
+    if revision_date_element is None:
+        print("No revision date element for {} in {}".format(layer_name, fgdb_path))
+        return
+
+    revision_date_text = revision_date_element.text
+
+    if not revision_date_text:
+        print("No revision date text for {} in {}".format(layer_name, fgdb_path))
+        return
+
+    revision_date_text = revision_date_text.split("T")[0]
+
+    revision_date_path = path.join(target_directory, "{}.revision_date.txt".format(layer_name))
+    with open(revision_date_path, "w+") as revision_date_file:
+        revision_date_file.write(revision_date_text)
+
+
 def extract_metadata_for_fgdb_layer(fgdb, fgdb_path, layer_name):
     parent_dir = path.abspath(path.join(fgdb_path, '..'))
 
@@ -21,22 +78,10 @@ def extract_metadata_for_fgdb_layer(fgdb, fgdb_path, layer_name):
         metadata_file.write(metadata_string)
 
     root = ET.fromstring(metadata_string)
-    abstract_element = root.find("./dataIdInfo/idAbs")
 
-    if abstract_element is None:
-        print("No abstact element for {} in {}".format(layer_name, fgdb_path))
-        return
-
-    abstract_html = abstract_element.text
-    abstract_text = BeautifulSoup(abstract_html, "lxml").text.strip()
-
-    if not abstract_text:
-        print("No abstact text for {} in {}".format(layer_name, fgdb_path))
-        return
-
-    abstract_path = path.join(parent_dir, "{}.abstract.txt".format(layer_name))
-    with open(abstract_path, "w+") as abstract_file:
-        abstract_file.write(metadata_string)
+    extract_abstract(root, parent_dir, layer_name)
+    extract_title(root, parent_dir, layer_name)
+    extract_revision_date(root, parent_dir, layer_name)
 
     print("Complete: {}".format(layer_name))
 
